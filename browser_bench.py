@@ -7,6 +7,8 @@ by simulating various realistic browsing behaviors and patterns.
 """
 
 import argparse
+import csv
+import os
 import random
 import subprocess
 import time
@@ -59,6 +61,7 @@ POWERMETRICS_DURATION_SEC = 1200  # 20 minutes of power monitoring
 TAB_ACTIVITY_DURATION = 90  # 90 seconds of active browsing
 SITES_FILE = "sites.txt"
 OUTPUT_FILE = "browser_power_results.csv"
+RESULT_COLUMNS = ["Browser", "Timestamp", "Power(mW)"]
 
 # Enhanced browsing patterns
 BROWSING_PATTERNS = [
@@ -93,6 +96,51 @@ def parse_browser_selection(browser_option):
 def get_browser_info(browser_key):
     """Return normalized browser metadata"""
     return BROWSERS[browser_key]
+
+
+def ensure_results_file_for_selected_browsers(selected_browsers):
+    """Preserve existing results and replace rows for selected browsers."""
+    selected_display_names = {
+        get_browser_info(browser_key)["display_name"] for browser_key in selected_browsers
+    }
+
+    if not os.path.exists(OUTPUT_FILE):
+        with open(OUTPUT_FILE, "w", newline="") as file_handle:
+            writer = csv.DictWriter(file_handle, fieldnames=RESULT_COLUMNS)
+            writer.writeheader()
+        return
+
+    try:
+        with open(OUTPUT_FILE, newline="") as file_handle:
+            reader = csv.DictReader(file_handle)
+            if reader.fieldnames is None or any(
+                column not in reader.fieldnames for column in RESULT_COLUMNS
+            ):
+                raise ValueError("Unexpected CSV header format")
+            rows = list(reader)
+    except (OSError, csv.Error, ValueError) as exc:
+        print(f"Warning: resetting {OUTPUT_FILE} due to read error: {exc}")
+        with open(OUTPUT_FILE, "w", newline="") as file_handle:
+            writer = csv.DictWriter(file_handle, fieldnames=RESULT_COLUMNS)
+            writer.writeheader()
+        return
+
+    filtered_rows = [
+        row for row in rows if row.get("Browser", "") not in selected_display_names
+    ]
+    replaced_rows = len(rows) - len(filtered_rows)
+
+    with open(OUTPUT_FILE, "w", newline="") as file_handle:
+        writer = csv.DictWriter(file_handle, fieldnames=RESULT_COLUMNS)
+        writer.writeheader()
+        writer.writerows(filtered_rows)
+
+    if replaced_rows > 0:
+        print(
+            f"Replaced {replaced_rows} previous measurements for selected browsers in {OUTPUT_FILE}."
+        )
+    else:
+        print(f"No previous measurements found for selected browsers in {OUTPUT_FILE}.")
 
 
 def open_tabs_in_browser(browser_key, sites):
@@ -426,9 +474,8 @@ def main():
 
     print(f"Testing with {len(sites)} websites")
 
-    # Initialize CSV
-    with open(OUTPUT_FILE, "w") as f:
-        f.write("Browser,Timestamp,Power(mW)\n")
+    # Initialize CSV for browser-level upsert behavior.
+    ensure_results_file_for_selected_browsers(selected_browsers)
 
     # Test each browser
     for browser_key in selected_browsers:

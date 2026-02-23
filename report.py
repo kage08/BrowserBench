@@ -24,7 +24,8 @@ def generate_report():
             return
 
         # Check if we have the expected columns
-        if "Browser" not in df.columns or "Power(mW)" not in df.columns:
+        required_columns = {"Browser", "Timestamp", "Power(mW)"}
+        if not required_columns.issubset(set(df.columns)):
             print("❌ Invalid CSV format!")
             print("Expected columns: Browser, Timestamp, Power(mW)")
             print(f"Found columns: {list(df.columns)}")
@@ -42,6 +43,9 @@ def generate_report():
         print(f"🌐 Browsers tested: {', '.join(summary.index)}")
         print(
             f"📈 Data collected from: {df['Timestamp'].min()} to {df['Timestamp'].max()}"
+        )
+        print(
+            "🧾 Snapshot scope: latest run for browsers tested most recently, with prior rows retained for browsers not re-run."
         )
         print()
 
@@ -64,7 +68,6 @@ def generate_report():
         # Calculate efficiency comparison if we have multiple browsers
         if len(summary) > 1:
             print("⚡ Efficiency Analysis:")
-            browsers = summary.index.tolist()
             most_efficient = summary["Mean_mW"].idxmin()
             least_efficient = summary["Mean_mW"].idxmax()
 
