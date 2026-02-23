@@ -9,6 +9,7 @@ This benchmark simulates realistic browsing behavior (tab switching, scrolling, 
 ## Features
 
 - **🤖 Advanced browser automation** using AppleScript with 6 different browsing patterns
+- **🧭 Selective browser testing** via CLI (`--browsers`) for Chrome/Firefox/Edge/Safari/Brave/Comet
 - **⚡ Precise power monitoring** with CPU + GPU + ANE measurements every second  
 - **🌐 Active browsing simulation** (tab cycling, scrolling, searching, reloading, zoom adjustments)
 - **📊 Statistical analysis** with mean, min, max, standard deviation, and efficiency comparisons
@@ -30,7 +31,7 @@ The benchmark simulates six realistic browsing behaviors:
 
 - macOS (tested on macOS 12+)
 - Python 3.7+
-- Safari and/or Brave Browser installed
+- At least one supported browser installed (Safari, Brave, Chrome, Firefox, Edge, or Comet)
 - Administrator privileges (for `powermetrics`)
 - Pandas library for report generation
 
@@ -47,6 +48,16 @@ The benchmark simulates six realistic browsing behaviors:
 2. **Run the benchmark** (requires sudo for power monitoring):
    ```bash
    sudo python browser_bench.py
+   ```
+
+   **Run specific browsers only**:
+   ```bash
+   sudo python browser_bench.py --browsers chrome,firefox,edge
+   ```
+
+   **List available browser keys**:
+   ```bash
+   python browser_bench.py --list-browsers
    ```
 
 3. **Generate detailed report**:
@@ -74,18 +85,21 @@ Recent benchmark results show significant differences in browser efficiency:
 
 ## Configuration
 
-Customize the benchmark by editing `browser_bench.py`:
+Customize test duration and behavior in `browser_bench.py`:
 
 ```python
 # Test duration settings
 POWERMETRICS_DURATION_SEC = 120  # Total monitoring time
 TAB_ACTIVITY_DURATION = 90       # Active browsing time
 
-# Browser configuration
+# Browser configuration (keys used by --browsers)
 BROWSERS = {
-    "Safari": "safari",
-    "Brave": "brave-browser",
-    # Add more browsers here
+    "safari": {...},
+    "brave": {...},
+    "chrome": {...},
+    "firefox": {...},
+    "edge": {...},
+    "comet": {...},
 }
 
 # Browsing patterns (automatically rotated)
@@ -96,6 +110,12 @@ BROWSING_PATTERNS = [
 ```
 
 Customize test websites by editing `sites.txt` (one URL per line).
+
+### Browser selection
+
+- Default: all configured browsers are tested.
+- Use `--browsers` with comma-separated keys to limit the run.
+- Example: `sudo python browser_bench.py --browsers chrome,firefox,edge`
 
 ## How It Works
 
@@ -116,17 +136,15 @@ Customize test websites by editing `sites.txt` (one URL per line).
 
 ## Adding New Browsers
 
-1. Add browser entry to the `BROWSERS` dictionary:
-   ```python
-   BROWSERS = {
-       "Safari": "safari",
-       "Brave": "brave-browser", 
-       "Chrome": "google-chrome",  # Example
-       "Firefox": "firefox"        # Example
-   }
+1. Add a new entry to `BROWSERS` with:
+   - `display_name` (for logs/CSV)
+   - `app_name` (macOS app name used with `open -a`)
+   - `process_name` (name used by AppleScript System Events)
+2. Verify tab switching works with Cmd+number shortcuts for the new browser.
+3. Validate with a targeted run:
+   ```bash
+   sudo python browser_bench.py --browsers your-browser-key
    ```
-
-2. Update the AppleScript process names in the browsing behavior functions if needed.
 
 ## Troubleshooting
 
