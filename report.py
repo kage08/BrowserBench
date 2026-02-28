@@ -33,7 +33,7 @@ def generate_report():
 
         # Group by browser and calculate statistics
         summary: pd.DataFrame = df.groupby("Browser")["Power(mW)"].agg(
-            Mean_mW="mean", Min_mW="min", Max_mW="max", StdDev_mW="std"
+            Mean_mW="mean", Median_mW="median", Min_mW="min", Max_mW="max", StdDev_mW="std"
         )  # type: ignore
 
         # Print results
@@ -51,16 +51,16 @@ def generate_report():
 
         # Print markdown-style table
         print(
-            "| Browser | Mean Power (mW) | Min Power (mW) | Max Power (mW) | Std Dev (mW) | Measurements |"
+            "| Browser | Mean Power (mW) | Median Power (mW) | Min Power (mW) | Max Power (mW) | Std Dev (mW) | Measurements |"
         )
         print(
-            "|---------|-----------------|----------------|----------------|--------------|--------------|"
+            "|---------|-----------------|-------------------|----------------|----------------|--------------|--------------|"
         )
 
         for browser, row in summary.iterrows():
             count = len(df[df["Browser"] == browser])
             print(
-                f"| {browser} | {row['Mean_mW']:.2f} | {row['Min_mW']:.0f} | {row['Max_mW']:.0f} | {row['StdDev_mW']:.2f} | {count} |"
+                f"| {browser} | {row['Mean_mW']:.2f} | {row['Median_mW']:.2f} | {row['Min_mW']:.0f} | {row['Max_mW']:.0f} | {row['StdDev_mW']:.2f} | {count} |"
             )
 
         print()
@@ -93,8 +93,9 @@ def generate_report():
             battery_wh = 50
             print("\n🔋 Estimated battery life (50Wh battery):")
             for browser, row in summary.iterrows():
-                hours = battery_wh / (row["Mean_mW"] / 1000)
-                print(f"   {browser}: ~{hours:.1f} hours")
+                hours_mean = battery_wh / (row["Mean_mW"] / 1000)
+                hours_median = battery_wh / (row["Median_mW"] / 1000)
+                print(f"   {browser}: ~{hours_mean:.1f}h (mean), ~{hours_median:.1f}h (median)")
 
     except Exception as e:
         print(f"❌ Error processing data: {e}")

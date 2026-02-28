@@ -26,10 +26,10 @@ BROWSERS = {
         "app_name": "Brave Browser",
         "process_name": "Brave Browser",
     },
-    "chrome": {
-        "display_name": "Chrome",
-        "app_name": "Google Chrome",
-        "process_name": "Google Chrome",
+    "chromebeta": {
+        "display_name": "Chrome Beta",
+        "app_name": "Google Chrome Beta",
+        "process_name": "Google Chrome Beta",
     },
     "firefox": {
         "display_name": "Firefox",
@@ -58,7 +58,7 @@ BROWSERS = {
     },
 }
 POWERMETRICS_DURATION_SEC = 1200  # 20 minutes of power monitoring
-TAB_ACTIVITY_DURATION = 90  # 90 seconds of active browsing
+TAB_ACTIVITY_DURATION = int(POWERMETRICS_DURATION_SEC * 0.8)  # 80% of total test time
 SITES_FILE = "sites.txt"
 OUTPUT_FILE = "browser_power_results.csv"
 RESULT_COLUMNS = ["Browser", "Timestamp", "Power(mW)"]
@@ -101,7 +101,8 @@ def get_browser_info(browser_key):
 def ensure_results_file_for_selected_browsers(selected_browsers):
     """Preserve existing results and replace rows for selected browsers."""
     selected_display_names = {
-        get_browser_info(browser_key)["display_name"] for browser_key in selected_browsers
+        get_browser_info(browser_key)["display_name"]
+        for browser_key in selected_browsers
     }
 
     if not os.path.exists(OUTPUT_FILE):
