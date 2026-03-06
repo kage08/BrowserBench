@@ -37,12 +37,12 @@ The benchmark simulates six realistic browsing behaviors:
 
 ## Quick Start
 
-1. **Setup the environment**:
+1. **Setup the environment** (using [uv](https://docs.astral.sh/uv/)):
    ```bash
    cd BrowserBench
-   python -m venv .venv
+   uv venv
    source .venv/bin/activate
-   pip install pandas
+   uv pip install pandas
    ```
 
 2. **Run the benchmark** (requires sudo for power monitoring):
@@ -165,6 +165,12 @@ This data helps users make informed decisions about browser choice based on thei
 ## License
 
 MIT License - Feel free to use and modify for your own browser testing needs.
+
+---
+
+## 🤖 For AI Agents
+
+If you are an AI agent working on this repository, please refer to [AGENTS.md](./AGENTS.md) for a technical guide on environment setup, core scripts, and automation mechanics.
 
 ---
 

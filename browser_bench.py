@@ -481,7 +481,13 @@ def main():
     # Test each browser
     for browser_key in selected_browsers:
         display_name = get_browser_info(browser_key)["display_name"]
+        app_name = get_browser_info(browser_key)["app_name"]
         print(f"\n=== Starting {display_name} test ===")
+
+        # Launch the browser first to trigger any session restore, then wait
+        print(f"Launching {display_name} and waiting for session restore...")
+        subprocess.run(["open", "-a", app_name])
+        time.sleep(5)
 
         close_browser_tabs(browser_key)
         time.sleep(2)
