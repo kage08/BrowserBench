@@ -10,12 +10,13 @@ import argparse
 import csv
 import os
 import random
+import re
 import subprocess
 import time
 from threading import Thread
 
 # Configuration
-BROWSERS: dict[str, dict[str, str]] = {
+BROWSERS = {
     "safari": {
         "display_name": "Safari",
         "app_name": "Safari",
@@ -57,11 +58,17 @@ BROWSERS: dict[str, dict[str, str]] = {
         "process_name": "zen",
     },
 }
-POWERMETRICS_DURATION_SEC = 1200  # 20 minutes of power monitoring
-TAB_ACTIVITY_DURATION = int(POWERMETRICS_DURATION_SEC * 0.8)  # 80% of total test time
+# Configuration defaults
+DEFAULT_DURATION_SEC = 1200  # 20 minutes default power monitoring
 SITES_FILE = "sites.txt"
-OUTPUT_FILE = "browser_power_results.csv"
-RESULT_COLUMNS = ["Browser", "Timestamp", "Power(mW)"]
+OUTPUT_FILE = "browser_power_results2.csv"
+RESULT_COLUMNS = [
+    "Browser",
+    "Timestamp",
+    "Total Power(mW)",
+    "Idle Baseline(mW)",
+    "Net Browser Power(mW)",
+]
 
 # Enhanced browsing patterns
 BROWSING_PATTERNS = [
@@ -74,12 +81,12 @@ BROWSING_PATTERNS = [
 ]
 
 
-def parse_browser_selection(browser_option: str | None) -> list[str]:
+def parse_browser_selection(browser_option):
     """Parse browser list from CLI option"""
     if not browser_option or browser_option.lower() == "all":
         return list(BROWSERS.keys())
 
-    selected: list[str] = []
+    selected = []
     for browser_key in browser_option.split(","):
         key = browser_key.strip().lower()
         if key not in BROWSERS:
@@ -152,7 +159,23 @@ def open_tabs_in_browser(browser_key, sites):
 
     print(f"Opening {len(sites)} tabs in {display_name}...")
     subprocess.run(["open", "-a", app_name])
-    time.sleep(1)
+    time.sleep(2)
+
+    # Maximize the window (not full-screen space)
+    try:
+        maximize_script = f"""
+        tell application "Finder"
+            set desktopSize to bounds of window of desktop
+        end tell
+        tell application "{app_name}"
+            activate
+            set bounds of front window to desktopSize
+        end tell
+        """
+        subprocess.run(["osascript", "-e", maximize_script])
+    except Exception as e:
+        print(f"Warning: Could not maximize {display_name} window: {e}")
+
     for site in sites:
         subprocess.run(["open", "-a", app_name, site])
         time.sleep(0.3)
@@ -350,164 +373,268 @@ def simulate_active_browsing(browser_key, num_tabs, duration_sec):
     print(f"Enhanced browsing simulation completed for {display_name}.")
 
 
-def run_powermetrics(browser_key, num_tabs):
-    """Run power monitoring while simulating browsing"""
+def get_system_power_mw():
+    """Get the current total system power draw in milliwatts using ioreg."""
+    try:
+        # Run ioreg to get AppleSmartBattery data
+        result = subprocess.run(
+            ["ioreg", "-r", "-n", "AppleSmartBattery"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True,
+        )
+
+        output = result.stdout
+
+        # Check if plugged in (ExternalConnected = Yes)
+        if "ExternalConnected" in output and '"ExternalConnected" = Yes' in output:
+            return None  # Cannot measure negative drain when plugged in
+
+        # Parse Voltage and Amperage
+        voltage_match = re.search(r'"Voltage" = (\d+)', output)
+        amperage_match = re.search(r'"Amperage" = (-?\d+)', output)
+
+        if voltage_match and amperage_match:
+            voltage_mv = int(voltage_match.group(1))
+            amperage_raw = int(amperage_match.group(1))
+
+            # ioreg sometimes outputs negative numbers as 64-bit unsigned integers
+            if amperage_raw > 2**63:
+                amperage_ma = amperage_raw - 2**64
+            else:
+                amperage_ma = amperage_raw
+
+            # Power in milliwatts = Voltage(mV) * Amperage(mA) / 1000
+            # Amperage is negative when discharging, so taking the absolute value
+            power_mw = abs((voltage_mv * amperage_ma) / 1000.0)
+            return power_mw
+
+        return 0.0
+    except subprocess.CalledProcessError:
+        return 0.0
+    except Exception as e:
+        print(f"  Warning: Error reading ioreg: {e}")
+        return 0.0
+
+
+def measure_idle_baseline(duration_sec=60):
+    """Measures the baseline power draw with no browsers running."""
+    print(f"\nMeasuring baseline idle power for {duration_sec} seconds...")
+    print("Please do not interact with the computer.")
+
+    start_time = time.time()
+    readings = []
+
+    while time.time() - start_time < duration_sec:
+        power = get_system_power_mw()
+        if power is None:
+            raise RuntimeError(
+                "MacBook is plugged into power! Please unplug to measure battery drain."
+            )
+
+        if power > 0:
+            readings.append(power)
+
+        time.sleep(1.0)
+
+    if not readings:
+        print("Warning: Could not measure idle baseline. Proceeding with 0mW baseline.")
+        return 0.0
+
+    baseline_mw = sum(readings) / len(readings)
+    print(f"Measured {len(readings)} readings.")
+    print(f"Baseline Idle Power: {baseline_mw:.2f} mW")
+    return baseline_mw
+
+
+def run_power_monitoring(browser_key, num_tabs, idle_baseline_mw, duration_sec):
+    """Run ioreg power monitoring while simulating browsing"""
     browser = get_browser_info(browser_key)
     display_name = browser["display_name"]
-    print(f"Running powermetrics for {display_name}...")
+    print(f"Running power monitoring for {display_name}...")
+
+    tab_activity_duration = int(duration_sec * 0.8)
 
     # Start browsing simulation in separate thread
     browsing_thread = Thread(
         target=simulate_active_browsing,
-        args=(browser_key, num_tabs, TAB_ACTIVITY_DURATION),
+        args=(browser_key, num_tabs, tab_activity_duration),
     )
     browsing_thread.daemon = True
     browsing_thread.start()
 
+    start_time = time.time()
+    power_readings = 0
+
     with open(OUTPUT_FILE, "a") as f:
-        proc = subprocess.Popen(
-            [
-                "sudo",
-                "powermetrics",
-                "-i",
-                "1000",
-                "--samplers",
-                "cpu_power,gpu_power",
-                "-a",
-                "--hide-cpu-duty-cycle",
-                "--show-usage-summary",
-                "--show-extra-power-info",
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
+        while time.time() - start_time < duration_sec:
+            power_mw = get_system_power_mw()
 
-        start_time = time.time()
-        power_readings = 0
+            if power_mw is None:
+                print("Warning: MacBook plugged in mid-test. Invalidating reading.")
+            elif power_mw > 0:
+                net_power = max(0, power_mw - idle_baseline_mw)
+                timestamp = int(time.time())
 
-        if proc.stdout is None:
-            raise RuntimeError("powermetrics stdout was not captured")
+                # ["Browser", "Timestamp", "Total Power(mW)", "Idle Baseline(mW)", "Net Browser Power(mW)"]
+                f.write(
+                    f"{display_name},{timestamp},{power_mw:.2f},{idle_baseline_mw:.2f},{net_power:.2f}\n"
+                )
+                f.flush()
 
-        while time.time() - start_time < POWERMETRICS_DURATION_SEC:
-            line = proc.stdout.readline()
-            if "Combined Power (CPU + GPU + ANE):" in line:
-                try:
-                    value = int(line.split(":")[1].strip().replace("mW", "").strip())
-                    timestamp = int(time.time())
-                    f.write(f"{display_name},{timestamp},{value}\n")
-                    f.flush()
-                    power_readings += 1
-                    if power_readings % 15 == 0:
-                        print(f"  Collected {power_readings} power readings...")
-                except ValueError:
-                    print(f"  Warning: Could not parse power value: {line.strip()}")
+                power_readings += 1
+                if power_readings % 15 == 0:
+                    print(
+                        f"  Collected {power_readings} power readings (Current Net: {net_power:.2f} mW)..."
+                    )
 
-        proc.terminate()
-        proc.wait()
+            time.sleep(1.0)
 
     browsing_thread.join(timeout=5)
     print(
-        f"powermetrics for {display_name} finished. Collected {power_readings} readings."
+        f"Monitoring for {display_name} finished. Collected {power_readings} readings."
     )
 
 
 def close_browser_tabs(browser_key):
-    """Close all browser tabs and windows"""
+    """Fully quit the browser application"""
     browser = get_browser_info(browser_key)
     display_name = browser["display_name"]
     app_name = browser["app_name"]
-    print(f"Closing tabs in {display_name}...")
+    print(f"Quitting {display_name}...")
     try:
         close_script = f"""
-        tell application "{app_name}"
-            repeat with w in windows
-                close w
-            end repeat
-        end tell
+        tell application "{app_name}" to quit
         """
 
         subprocess.run(["osascript", "-e", close_script])
-        print(f"Tabs closed in {display_name}.")
+        print(f"{display_name} quit successfully.")
     except Exception as e:
-        print(f"Error closing tabs in {display_name}: {e}")
+        print(f"Error quitting {display_name}: {e}")
 
 
 def main():
     """Main benchmark execution"""
-    parser = argparse.ArgumentParser(
-        description="Run browser power benchmark with realistic browsing simulation."
-    )
-    parser.add_argument(
-        "--browsers",
-        default="all",
-        help=(
-            "Comma-separated browser keys to test "
-            f"(e.g. chrome,firefox,edge). Use 'all' for every browser. "
-            f"Available: {', '.join(BROWSERS.keys())}"
-        ),
-    )
-    parser.add_argument(
-        "--list-browsers",
-        action="store_true",
-        help="List available browser keys and exit.",
-    )
-    args = parser.parse_args()
+    # Prevent system and display sleep during the entire benchmark run
+    caffeinate_proc = subprocess.Popen(["caffeinate", "-di"])
 
-    if args.list_browsers:
-        print("Available browsers:")
-        for key, data in BROWSERS.items():
-            print(f"  {key}: {data['display_name']}")
-        return
+    try:
+        parser = argparse.ArgumentParser(
+            description="Run browser power benchmark with realistic browsing simulation."
+        )
+        parser.add_argument(
+            "--browsers",
+            default="all",
+            help=(
+                "Comma-separated browser keys to test "
+                f"(e.g. chrome,firefox,edge). Use 'all' for every browser. "
+                f"Available: {', '.join(BROWSERS.keys())}"
+            ),
+        )
+        parser.add_argument(
+            "--list-browsers",
+            action="store_true",
+            help="List available browser keys and exit.",
+        )
+        parser.add_argument(
+            "--duration",
+            type=int,
+            default=DEFAULT_DURATION_SEC,
+            help=f"Total duration in seconds to test each browser (default: {DEFAULT_DURATION_SEC})",
+        )
+        args = parser.parse_args()
 
-    selected_browsers = parse_browser_selection(args.browsers)
-    random.shuffle(selected_browsers)
+        if args.list_browsers:
+            print("Available browsers:")
+            for key, data in BROWSERS.items():
+                print(f"  {key}: {data['display_name']}")
+            return
 
-    print("=== Enhanced Browser Power Benchmark ===")
-    print(f"Power monitoring: {POWERMETRICS_DURATION_SEC}s")
-    print(f"Active browsing: {TAB_ACTIVITY_DURATION}s")
-    print(f"Browsing patterns: {', '.join(BROWSING_PATTERNS)}")
-    print(f"Selected browsers: {', '.join(selected_browsers)}")
+        selected_browsers = parse_browser_selection(args.browsers)
+        duration_sec = args.duration
+        tab_activity_duration = int(duration_sec * 0.8)
 
-    # Load test sites
-    sites = []
-    with open(SITES_FILE, "r") as f:
-        sites = [line.strip() for line in f if line.strip()]
+        print("=== Enhanced Browser Power Benchmark ===")
+        print(f"Power monitoring: {duration_sec}s")
+        print(f"Active browsing: {tab_activity_duration}s")
+        print(f"Browsing patterns: {', '.join(BROWSING_PATTERNS)}")
+        print(f"Selected browsers: {', '.join(selected_browsers)}")
 
-    print(f"Testing with {len(sites)} websites")
+        # Load test sites
+        sites = []
+        with open(SITES_FILE, "r") as f:
+            sites = [line.strip() for line in f if line.strip()]
 
-    # Initialize CSV for browser-level upsert behavior.
-    ensure_results_file_for_selected_browsers(selected_browsers)
+        print(f"Testing with {len(sites)} websites")
 
-    # Test each browser
-    for browser_key in selected_browsers:
-        display_name = get_browser_info(browser_key)["display_name"]
-        app_name = get_browser_info(browser_key)["app_name"]
-        print(f"\n=== Starting {display_name} test ===")
+        # Ensure the laptop is unplugged before starting
+        initial_check = get_system_power_mw()
+        if initial_check is None:
+            print("\nERROR: MacBook is currently plugged into a power source.")
+            print("Total system power can only be measured via ioreg when discharging.")
+            print("Please UNPLUG the laptop and run the benchmark again.")
+            return
 
-        # Launch the browser first to trigger any session restore, then wait
-        print(f"Launching {display_name} and waiting for session restore...")
-        subprocess.run(["open", "-a", app_name])
-        time.sleep(5)
+        # Measure the baseline idle power
+        # We fully quit all possible browsers first to get a true idle baseline
+        print(
+            "\nPreparing for idle baseline measurement. Quitting all known browsers..."
+        )
+        for b_key in BROWSERS.keys():
+            close_browser_tabs(b_key)
+        time.sleep(5)  # Give applications time to fully terminate
 
-        close_browser_tabs(browser_key)
-        time.sleep(2)
+        idle_baseline_mw = measure_idle_baseline(duration_sec=60)
 
-        open_tabs_in_browser(browser_key, sites)
-        print(f"Waiting 12 seconds for {display_name} to load content...")
-        time.sleep(12)
+        # Initialize CSV for browser-level upsert behavior.
+        ensure_results_file_for_selected_browsers(selected_browsers)
 
-        run_powermetrics(browser_key, len(sites))
-        close_browser_tabs(browser_key)
+        # Test each browser
+        for browser_key in selected_browsers:
+            display_name = get_browser_info(browser_key)["display_name"]
+            app_name = get_browser_info(browser_key)["app_name"]
+            print(f"\n=== Starting {display_name} test ===")
 
-        print(f"=== Finished {display_name} test ===")
-        if browser_key != selected_browsers[-1]:
-            print("Waiting 15 seconds before next browser...")
-            time.sleep(15)
+            # Launch the browser first to trigger any session restore, then wait
+            print(f"Launching {display_name} and waiting for session restore...")
+            subprocess.run(["open", "-a", app_name])
+            time.sleep(5)
 
-    print("\n=== Enhanced Benchmark Complete! ===")
-    print(f"Results saved to {OUTPUT_FILE}")
-    print("Advanced browsing patterns were used for realistic power measurements.")
+            # Close all restored windows to ensure a clean slate
+            print(f"Closing restored windows in {display_name}...")
+            close_windows_script = f"""
+            tell application "{app_name}"
+                repeat with w in windows
+                    close w
+                end repeat
+            end tell
+            """
+            subprocess.run(["osascript", "-e", close_windows_script])
+            time.sleep(2)
+
+            open_tabs_in_browser(browser_key, sites)
+            print(f"Waiting 12 seconds for {display_name} to load content...")
+            time.sleep(12)
+
+            run_power_monitoring(
+                browser_key, len(sites), idle_baseline_mw, duration_sec
+            )
+            close_browser_tabs(browser_key)
+
+            print(f"=== Finished {display_name} test ===")
+            if browser_key != selected_browsers[-1]:
+                print("Waiting 15 seconds before next browser...")
+                time.sleep(15)
+
+        print("\n=== Enhanced Benchmark Complete! ===")
+        print(f"Results saved to {OUTPUT_FILE}")
+        print("Advanced browsing patterns were used for realistic power measurements.")
+
+    finally:
+        # Kill caffeinate to allow normal sleep again
+        caffeinate_proc.terminate()
+        caffeinate_proc.wait()
 
 
 if __name__ == "__main__":
