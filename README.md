@@ -79,25 +79,11 @@ The benchmark simulates six realistic browsing behaviors:
 
 Recent benchmark results (via `report2.py`, measuring net browser power above idle baseline):
 
-| Browser | Net Mean Power (mW) | Net Median Power (mW) | Net Min Power (mW) | Net Max Power (mW) | Std Dev (mW) | Measurements |
-|---------|---------------------|-----------------------|--------------------|--------------------|--------------|--------------|
-| Brave | 1102.93 | 360.53 | 0 | 6,676 | 1828.28 | 1144 |
-| ChatGPT Atlas | 141.65 | 0.00 | 0 | 1,731 | 437.36 | 1155 |
-| Chrome Beta | 1129.84 | 0.00 | 0 | 19,749 | 3958.86 | 1139 |
-| Comet | 2399.76 | 451.20 | 0 | 22,298 | 4724.15 | 1141 |
-| Edge | 1655.27 | 0.00 | 0 | 22,103 | 3905.93 | 1141 |
-| Firefox | 3314.93 | 1964.79 | 0 | 14,475 | 4031.72 | 1144 |
-| Safari | 1467.26 | 0.00 | 0 | 16,993 | 3971.11 | 1139 |
-| Zen | 4104.95 | 3109.33 | 0 | 13,080 | 4698.88 | 1144 |
-
-**Efficiency Analysis:** ChatGPT Atlas is most efficient (142 mW net avg); Zen is least efficient (4,105 mW net avg) — a 96.5% improvement (3,963 mW difference).
-
 **Estimated battery life (50Wh battery) during active browsing:**
 
 | Browser | Mean Estimate | Median Estimate |
 |---------|---------------|-----------------|
 | Brave | ~9.7h | ~10.4h |
-| ChatGPT Atlas | ~15.3h | ~17.6h |
 | Chrome Beta | ~10.7h | ~15.0h |
 | Comet | ~8.0h | ~10.2h |
 | Edge | ~9.1h | ~11.9h |
