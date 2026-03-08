@@ -17,7 +17,8 @@ This repository is designed to measure and compare real-world power consumption 
 | `standardize_env.py` | Prep the system | Sets brightness, prompts for Focus Mode, etc. |
 | `browser_bench2.py` | Main Benchmark (ioreg) | Uses `ioreg` for voltage/amperage monitoring. |
 | `browser_bench.py` | Benchmark (powermetrics) | Uses `powermetrics` (requires sudo). |
-| `report.py` | Result Analysis | Processes CSV output into statistics and estimates. |
+| `report.py` | Result Analysis (v1) | Processes `browser_power_results.csv` into statistics and estimates. |
+| `report2.py` | Result Analysis (v2) | Processes `browser_power_results2.csv` from `browser_bench2.py`. |
 
 ## 🔄 Data Flow
 

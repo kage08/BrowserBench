@@ -67,10 +67,13 @@ The benchmark simulates six realistic browsing behaviors:
 
 ## Files
 
-- `browser_bench.py` - Enhanced benchmark script with advanced browsing patterns
+- `browser_bench.py` - Benchmark script using `powermetrics` (requires sudo)
+- `browser_bench2.py` - Benchmark script using `ioreg` (no sudo required; MacBook must be unplugged)
+- `standardize_env.py` - Pre-benchmark environment setup (brightness, Focus Mode, etc.)
+- `report.py` - Analysis and reporting tool for `browser_bench.py` results
+- `report2.py` - Analysis and reporting tool for `browser_bench2.py` results
 - `sites.txt` - List of websites to test with (customizable)
-- `report.py` - Enhanced analysis and reporting tool with battery life estimates
-- `browser_power_results.csv` - Generated power measurement data (created after benchmark)
+- `browser_power_results.csv` / `browser_power_results2.csv` - Generated power measurement data (created after benchmark)
 
 ## Sample Results
 
