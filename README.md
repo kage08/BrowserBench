@@ -4,13 +4,16 @@ A comprehensive tool to measure and compare real-world power consumption of diff
 
 ## Overview
 
-This benchmark simulates realistic browsing behavior (tab switching, scrolling, searching, page reloading) while measuring precise power consumption using macOS's built-in `powermetrics` utility. The tool provides statistical analysis to compare browser efficiency and real-world battery life impact.
+This benchmark simulates realistic browsing behavior (tab switching, scrolling, searching, page reloading) while measuring power via two workflows:
+- `browser_bench2.py` (recommended): `ioreg`-based total system drain with idle-baseline subtraction
+- `browser_bench.py`: `powermetrics`-based CPU/GPU/ANE power sampling
+The tool provides statistical analysis to compare browser efficiency and real-world battery life impact.
 
 ## Features
 
 - **🤖 Advanced browser automation** using AppleScript with 6 different browsing patterns
 - **🧭 Selective browser testing** via CLI (`--browsers`) for Chrome/Firefox/Edge/Safari/Brave/Comet
-- **⚡ Precise power monitoring** with CPU + GPU + ANE measurements every second  
+- **⚡ Dual measurement workflows** (`ioreg` net-browser power and `powermetrics` component power)  
 - **🌐 Active browsing simulation** (tab cycling, scrolling, searching, reloading, zoom adjustments)
 - **📊 Statistical analysis** with mean, min, max, standard deviation, and efficiency comparisons
 - **🧹 Clean test isolation** between different browsers with automated cleanup
@@ -32,7 +35,8 @@ The benchmark simulates six realistic browsing behaviors:
 - macOS (tested on macOS 12+)
 - Python 3.7+
 - At least one supported browser installed (Safari, Brave, Chrome, Firefox, Edge, or Comet)
-- Administrator privileges (for `powermetrics`)
+- Administrator privileges (for `powermetrics` in `browser_bench.py`)
+- MacBook on battery power (required for `browser_bench2.py`)
 - Pandas library for report generation
 
 ## Quick Start
@@ -44,26 +48,70 @@ The benchmark simulates six realistic browsing behaviors:
    source .venv/bin/activate
    uv pip install pandas
    ```
-
-2. **Run the benchmark** (requires sudo for power monitoring):
+2. **Standardize the environment before benchmarking (for precise measurements)**:
    ```bash
-   sudo python browser_bench.py
+   uv run standardize_env.py
+   ```
+   Run this before `browser_bench.py` or `browser_bench2.py` to reduce measurement noise and improve consistency.
+
+3. **Workflow A (recommended): `browser_bench2.py` (`ioreg`)**  
+   This is the more useful default for most comparisons.
+
+   **Run benchmark**:
+   ```bash
+   uv run browser_bench2.py
    ```
 
-   **Run specific browsers only**:
+   **Run specific browsers and custom duration**:
    ```bash
-   sudo python browser_bench.py --browsers chrome,firefox,edge
+   uv run browser_bench2.py --browsers chrome,safari --duration 600
    ```
 
-   **List available browser keys**:
+   **List browser keys**:
    ```bash
-   python browser_bench.py --list-browsers
+   uv run browser_bench2.py --list-browsers
    ```
 
-3. **Generate detailed report**:
+   **Generate report**:
    ```bash
-   python report.py
+   uv run report2.py
    ```
+
+4. **Workflow B: `browser_bench.py` (`powermetrics`)**  
+   Useful when you want component-power sampling via `powermetrics` (requires `sudo` authorization during run).
+
+   **Run benchmark**:
+   ```bash
+   uv run browser_bench.py
+   ```
+
+   **Run specific browsers**:
+   ```bash
+   uv run browser_bench.py --browsers chrome,firefox,edge
+   ```
+
+   **List browser keys**:
+   ```bash
+   uv run browser_bench.py --list-browsers
+   ```
+
+   **Generate report**:
+   ```bash
+   uv run report.py
+   ```
+
+## Which Workflow Should I Use?
+
+`browser_bench2.py` is generally more useful and should be your default.
+
+- **Advantages of `browser_bench2.py`**
+  - No top-level `sudo` requirement for the benchmark script
+  - Measures total system drain and subtracts idle baseline (`Net Browser Power`)
+  - Supports `--duration` for quick, repeatable focused tests
+
+- **Advantages of `browser_bench.py`**
+  - Uses `powermetrics` for CPU/GPU/ANE-oriented power sampling
+  - Helpful as a secondary validation method when you want component-level perspective
 
 ## Files
 
@@ -93,21 +141,23 @@ Recent benchmark results (via `report2.py`, measuring net browser power above id
 
 ## Configuration
 
-Customize test duration and behavior in `browser_bench.py`:
+Customize defaults in `browser_bench.py`:
 
 ```python
 # Test duration settings
-POWERMETRICS_DURATION_SEC = 120  # Total monitoring time
-TAB_ACTIVITY_DURATION = 90       # Active browsing time
+POWERMETRICS_DURATION_SEC = 1200  # Total monitoring time
+TAB_ACTIVITY_DURATION = int(POWERMETRICS_DURATION_SEC * 0.8)  # Active browsing time
 
 # Browser configuration (keys used by --browsers)
 BROWSERS = {
     "safari": {...},
     "brave": {...},
-    "chrome": {...},
+    "chromebeta": {...},
     "firefox": {...},
     "edge": {...},
     "comet": {...},
+    "atlas": {...},
+    "zen": {...},
 }
 
 # Browsing patterns (automatically rotated)
@@ -117,19 +167,24 @@ BROWSING_PATTERNS = [
 ]
 ```
 
+For `browser_bench2.py`, use `--duration` to override runtime without editing code:
+`uv run browser_bench2.py --duration 1200`
+
 Customize test websites by editing `sites.txt` (one URL per line).
 
 ### Browser selection
 
 - Default: all configured browsers are tested.
 - Use `--browsers` with comma-separated keys to limit the run.
-- Example: `sudo python browser_bench.py --browsers chrome,firefox,edge`
+- Example: `uv run browser_bench2.py --browsers brave,safari,edge`
 
 ## How It Works
 
 1. **🌐 Opens multiple tabs** with real websites from `sites.txt`
 2. **🎭 Simulates realistic browsing** using 6 different behavioral patterns
-3. **📏 Monitors power consumption** every second using `powermetrics`
+3. **📏 Monitors power consumption** every second using one of two methods:
+   - `browser_bench2.py`: `ioreg` + idle-baseline subtraction (`Net Browser Power`)
+   - `browser_bench.py`: `powermetrics` CPU/GPU/ANE sampling
 4. **📈 Collects statistical data** over configurable test periods
 5. **🧮 Generates comparative analysis** with efficiency calculations and battery estimates
 6. **🧹 Automatically cleans up** browser state between tests
@@ -151,12 +206,13 @@ Customize test websites by editing `sites.txt` (one URL per line).
 2. Verify tab switching works with Cmd+number shortcuts for the new browser.
 3. Validate with a targeted run:
    ```bash
-   sudo python browser_bench.py --browsers your-browser-key
+   uv run browser_bench2.py --browsers your-browser-key --duration 300
    ```
 
 ## Troubleshooting
 
-- **Permission Issues**: Ensure you run with `sudo` for powermetrics access
+- **Permission Issues**: `browser_bench.py` requires `sudo` authorization for `powermetrics`
+- **Plugged-in Laptop**: `browser_bench2.py` requires battery-discharge mode (unplugged MacBook)
 - **Empty Results**: Check that browsers are installed and accessible
 - **High CPU Usage**: Normal during testing due to active browsing simulation
 
