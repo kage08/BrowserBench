@@ -27,10 +27,10 @@ BROWSERS = {
         "app_name": "Brave Browser",
         "process_name": "Brave Browser",
     },
-    "chromebeta": {
-        "display_name": "Chrome Beta",
-        "app_name": "Google Chrome Beta",
-        "process_name": "Google Chrome Beta",
+    "chrome": {
+        "display_name": "Chrome",
+        "app_name": "Google Chrome",
+        "process_name": "Google Chrome",
     },
     "firefox": {
         "display_name": "Firefox",
