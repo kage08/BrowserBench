@@ -131,9 +131,10 @@ Recent benchmark results (via `report2.py`, measuring net browser power above id
 
 | Browser | Mean Estimate | Median Estimate |
 |---------|---------------|-----------------|
-| Chrome | ~16.5h | ~21.5h |
-| Edge | ~14.4h | ~16.3h |
-| Zen | ~14.3h | ~18.0h |
+| Chrome | ~19.0h | ~23.5h |
+| Edge | ~16.1h | ~19.1h |
+| Safari | ~19.3h | ~21.1h |
+| Zen | ~19.7h | ~19.8h |
 
 ## Configuration
 
