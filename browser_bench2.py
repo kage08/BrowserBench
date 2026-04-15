@@ -411,7 +411,11 @@ def get_system_power_mw():
             return power_mw
 
         return 0.0
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
+        print(
+            "Warning: ioreg command failed. Ensure this is run on macOS with proper permissions.",
+            e,
+        )
         return 0.0
     except Exception as e:
         print(f"  Warning: Error reading ioreg: {e}")
@@ -454,7 +458,9 @@ def run_power_monitoring(browser_key, num_tabs, idle_baseline_mw, duration_sec):
     display_name = browser["display_name"]
     print(f"Running power monitoring for {display_name}...")
 
-    tab_activity_duration = int(duration_sec * 0.8)
+    tab_activity_duration = int(
+        duration_sec * 0.9
+    )  # Simulate active browsing for 90% of the time
 
     # Start browsing simulation in separate thread
     browsing_thread = Thread(
