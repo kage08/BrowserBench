@@ -91,7 +91,6 @@ Note: `browserbench run-powermetrics` uses `powermetrics`, which requires `sudo`
 
 ## `uvx` Usage
 
-Once the package is published to PyPI:
 
 ```bash
 uvx --from git+https://github.com/kage08/browserbench browserbench --help
