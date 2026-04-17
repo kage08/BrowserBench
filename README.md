@@ -94,20 +94,11 @@ Note: `browserbench run-powermetrics` uses `powermetrics`, which requires `sudo`
 Once the package is published to PyPI:
 
 ```bash
-uvx browserbench --help
+uvx --from git+https://github.com/kage08/browserbench browserbench --help
 ```
 
-If you want to test the public GitHub repo before publishing, `uvx` can also install from a Git URL:
-
-```bash
-uvx --from git+https://github.com/<owner>/<repo> browserbench --help
-```
-
-Replace `<owner>/<repo>` with the actual repository path.
 
 ## Publishing Notes
-
-The package metadata is ready for a normal Python release flow. Before publishing to PyPI, run one full install/build check in a normal networked environment so `hatchling` can be resolved and the release artifacts can be validated end to end.
 
 A typical release flow will look like:
 
@@ -118,7 +109,7 @@ python -m twine check dist/*
 python -m twine upload dist/*
 ```
 
-## Where Everything Went
+## Docs
 
 - Setup, running, and report workflows: [docs/usage.md](./docs/usage.md)
 - Files, workflows, customization, and troubleshooting: [docs/reference.md](./docs/reference.md)
