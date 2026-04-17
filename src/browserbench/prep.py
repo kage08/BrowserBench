@@ -1,27 +1,20 @@
-#!/usr/bin/env python3
-"""
-Setup Benchmark Environment
+"""Environment preparation helpers."""
 
-This script standardizes the macOS environment before running the browser benchmark.
-It handles screen brightness and ensures background tasks are paused.
-"""
+from __future__ import annotations
 
 import subprocess
 
 
-def set_brightness_50():
+def set_brightness_50() -> None:
     print("Setting screen brightness to ~50%...")
-    # Using AppleScript to simulate media keys for brightness (145 = down, 144 = up)
     applescript = """
     tell application "System Events"
-        -- Press Brightness Down 32 times to ensure it's at zero 
         repeat 32 times
             key code 145
         end repeat
-        
+
         delay 0.5
-        
-        -- Press Brightness Up 8 times (assuming 16 total steps for standard macOS)
+
         repeat 8 times
             key code 144
         end repeat
@@ -30,13 +23,14 @@ def set_brightness_50():
     try:
         subprocess.run(["osascript", "-e", applescript], check=True)
         print("Screen brightness set.")
-    except subprocess.CalledProcessError as e:
+    except subprocess.CalledProcessError as exc:
         print(
-            f"Warning: Could not automatically set screen brightness. Please do it manually. Error: {e}"
+            "Warning: Could not automatically set screen brightness. "
+            f"Please do it manually. Error: {exc}"
         )
 
 
-def prompt_user_background_processes():
+def prompt_user_background_processes() -> None:
     print("=" * 60)
     print("ENVIRONMENT STANDARDIZATION CHECKLIST")
     print("=" * 60)
@@ -51,18 +45,17 @@ def prompt_user_background_processes():
         response = input("Have you completed these steps? (Y/n): ").strip().lower()
         if response in ("y", "yes", ""):
             break
-        elif response in ("n", "no"):
+        if response in ("n", "no"):
             print("Please complete the steps before continuing.")
-        else:
-            print("Please enter 'Y' or 'N'.")
+            continue
+        print("Please enter 'Y' or 'N'.")
 
 
-def main():
+def run_prep() -> None:
     print("Starting environment preparation...")
     prompt_user_background_processes()
     set_brightness_50()
-    print("Environment is now standardized. You can proceed to run browser_bench.py.")
+    print("Environment is now standardized.")
+    print("Recommended next step: browserbench doctor")
+    print("Then run: browserbench run")
 
-
-if __name__ == "__main__":
-    main()

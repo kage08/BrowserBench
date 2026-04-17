@@ -1,3 +1,7 @@
 .venv
+.uv-cache
+build
+dist
+*.egg-info
 
 browser-power-benchmark-blog-post.mdx

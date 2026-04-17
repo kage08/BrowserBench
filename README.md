@@ -1,238 +1,139 @@
-# Browser Power Benchmark
+# BrowserBench
 
-A comprehensive tool to measure and compare real-world power consumption of different web browsers on macOS using advanced browsing simulation patterns.
+Measure and compare real-world browser power usage on macOS.
 
-## Overview
+BrowserBench is installable as a normal CLI app. After install, users run `browserbench` directly instead of cloning the repo and invoking individual scripts.
 
-This benchmark simulates realistic browsing behavior (tab switching, scrolling, searching, page reloading) while measuring power via two workflows:
-- `browser_bench2.py` (recommended): `ioreg`-based total system drain with idle-baseline subtraction
-- `browser_bench.py`: `powermetrics`-based CPU/GPU/ANE power sampling
-The tool provides statistical analysis to compare browser efficiency and real-world battery life impact.
+## Install
 
-## Features
+With `uv`:
 
-- **🤖 Advanced browser automation** using AppleScript with 6 different browsing patterns
-- **🧭 Selective browser testing** via CLI (`--browsers`) for Chrome/Firefox/Edge/Safari/Brave/Comet
-- **⚡ Dual measurement workflows** (`ioreg` net-browser power and `powermetrics` component power)  
-- **🌐 Active browsing simulation** (tab cycling, scrolling, searching, reloading, zoom adjustments)
-- **📊 Statistical analysis** with mean, min, max, standard deviation, and efficiency comparisons
-- **🧹 Clean test isolation** between different browsers with automated cleanup
-- **🔋 Battery life estimation** based on actual power consumption data
+```bash
+uv tool install .
+```
 
-## Browsing Patterns
+With `pip`:
 
-The benchmark simulates six realistic browsing behaviors:
+```bash
+python -m pip install .
+```
 
-1. **Quick Scan** - Fast scrolling through content (like skimming news)
-2. **Detailed Read** - Slower, deliberate reading with small scrolls
-3. **Search Mode** - Using Cmd+F to search within pages
-4. **Link Navigation** - Tab key navigation between clickable elements
-5. **Page Reload** - Refreshing content (common on news/social sites)
-6. **Zoom Adjust** - Changing zoom levels for better readability
+For local development without a global install:
 
-## Requirements
+```bash
+uv run browserbench --help
+```
 
-- macOS (tested on macOS 12+)
-- Python 3.7+
-- At least one supported browser installed (Safari, Brave, Chrome, Firefox, Edge, or Comet)
-- Administrator privileges (for `powermetrics` in `browser_bench.py`)
-- MacBook on battery power (required for `browser_bench2.py`)
-- Pandas library for report generation
+For a local editable install during development:
+
+```bash
+uv pip install -e .
+```
 
 ## Quick Start
 
-1. **Setup the environment** (using [uv](https://docs.astral.sh/uv/)):
-   ```bash
-   cd BrowserBench
-   uv venv
-   source .venv/bin/activate
-   uv pip install pandas
-   ```
-2. **Standardize the environment before benchmarking (for precise measurements)**:
-   ```bash
-   uv run standardize_env.py
-   ```
-   Run this before `browser_bench.py` or `browser_bench2.py` to reduce measurement noise and improve consistency.
+1. Prepare the Mac for a cleaner run:
 
-3. **Workflow A (recommended): `browser_bench2.py` (`ioreg`)**  
-   This is the more useful default for most comparisons.
-
-   **Run benchmark**:
    ```bash
-   uv run browser_bench2.py
+   browserbench prep
    ```
 
-   **Run specific browsers and custom duration**:
+2. Unplug the MacBook from power.
+
+   The default `ioreg` workflow measures battery discharge and requires the machine to be running on battery.
+
+3. Run the preflight check:
+
    ```bash
-   uv run browser_bench2.py --browsers chrome,safari --duration 600
+   browserbench doctor
    ```
 
-   **List browser keys**:
+4. Run the benchmark:
+
    ```bash
-   uv run browser_bench2.py --list-browsers
+   browserbench run
    ```
 
-   **Generate report**:
+5. Generate the report:
+
    ```bash
-   uv run report2.py
+   browserbench report
    ```
 
-4. **Workflow B: `browser_bench.py` (`powermetrics`)**  
-   Useful when you want component-power sampling via `powermetrics` (requires `sudo` authorization during run).
+## Most Useful Commands
 
-   **Run benchmark**:
-   ```bash
-   uv run browser_bench.py
-   ```
+Run only a few browsers for a shorter test:
 
-   **Run specific browsers**:
-   ```bash
-   uv run browser_bench.py --browsers chrome,firefox,edge
-   ```
-
-   **List browser keys**:
-   ```bash
-   uv run browser_bench.py --list-browsers
-   ```
-
-   **Generate report**:
-   ```bash
-   uv run report.py
-   ```
-
-## Which Workflow Should I Use?
-
-`browser_bench2.py` is generally more useful and should be your default.
-
-- **Advantages of `browser_bench2.py`**
-  - No top-level `sudo` requirement for the benchmark script
-  - Measures total system drain and subtracts idle baseline (`Net Browser Power`)
-  - Supports `--duration` for quick, repeatable focused tests
-
-- **Advantages of `browser_bench.py`**
-  - Uses `powermetrics` for CPU/GPU/ANE-oriented power sampling
-  - Helpful as a secondary validation method when you want component-level perspective
-
-## Files
-
-- `browser_bench.py` - Benchmark script using `powermetrics` (requires sudo)
-- `browser_bench2.py` - Benchmark script using `ioreg` (no sudo required; MacBook must be unplugged)
-- `standardize_env.py` - Pre-benchmark environment setup (brightness, Focus Mode, etc.)
-- `report.py` - Analysis and reporting tool for `browser_bench.py` results
-- `report2.py` - Analysis and reporting tool for `browser_bench2.py` results
-- `sites.txt` - List of websites to test with (customizable)
-- `browser_power_results.csv` / `browser_power_results2.csv` - Generated power measurement data (created after benchmark)
-
-## Sample Results
-
-Recent benchmark results (via `report2.py`, measuring net browser power above idle baseline):
-
-**Estimated battery life (50Wh battery) during active browsing:**
-
-| Browser | Mean Estimate | Median Estimate |
-|---------|---------------|-----------------|
-| Chrome | ~19.0h | ~23.5h |
-| Edge | ~16.1h | ~19.1h |
-| Safari | ~19.3h | ~21.1h |
-| Zen | ~19.7h | ~19.8h |
-
-## Configuration
-
-Customize defaults in `browser_bench.py`:
-
-```python
-# Test duration settings
-POWERMETRICS_DURATION_SEC = 1200  # Total monitoring time
-TAB_ACTIVITY_DURATION = int(POWERMETRICS_DURATION_SEC * 0.8)  # Active browsing time
-
-# Browser configuration (keys used by --browsers)
-BROWSERS = {
-    "safari": {...},
-    "brave": {...},
-    "chromebeta": {...},
-    "firefox": {...},
-    "edge": {...},
-    "comet": {...},
-    "atlas": {...},
-    "zen": {...},
-}
-
-# Browsing patterns (automatically rotated)
-BROWSING_PATTERNS = [
-    "quick_scan", "detailed_read", "search_mode",
-    "link_navigation", "reload_page", "zoom_adjust"
-]
+```bash
+browserbench run --browsers chrome,safari --duration 300
 ```
 
-For `browser_bench2.py`, use `--duration` to override runtime without editing code:
-`uv run browser_bench2.py --duration 1200`
+List the configured browser keys:
 
-Customize test websites by editing `sites.txt` (one URL per line).
+```bash
+browserbench browsers
+```
 
-### Browser selection
+Run the preflight checks without starting a benchmark:
 
-- Default: all configured browsers are tested.
-- Use `--browsers` with comma-separated keys to limit the run.
-- Example: `uv run browser_bench2.py --browsers brave,safari,edge`
+```bash
+browserbench doctor
+```
 
-## How It Works
+Use the older `powermetrics` workflow instead:
 
-1. **🌐 Opens multiple tabs** with real websites from `sites.txt`
-2. **🎭 Simulates realistic browsing** using 6 different behavioral patterns
-3. **📏 Monitors power consumption** every second using one of two methods:
-   - `browser_bench2.py`: `ioreg` + idle-baseline subtraction (`Net Browser Power`)
-   - `browser_bench.py`: `powermetrics` CPU/GPU/ANE sampling
-4. **📈 Collects statistical data** over configurable test periods
-5. **🧮 Generates comparative analysis** with efficiency calculations and battery estimates
-6. **🧹 Automatically cleans up** browser state between tests
+```bash
+browserbench run-powermetrics
+browserbench report browser_power_results.csv
+```
 
-## Technical Implementation
+Note: `browserbench run-powermetrics` uses `powermetrics`, which requires `sudo`.
 
-- **AppleScript Integration**: Native browser control for realistic automation
-- **Concurrent Processing**: Browsing simulation runs parallel to power monitoring
-- **Pattern Rotation**: Ensures variety with scheduled and random pattern selection
-- **Robust Error Handling**: Graceful handling of automation and measurement errors
-- **Real-time Data Logging**: CSV format with timestamps for detailed analysis
+## `uvx` Usage
 
-## Adding New Browsers
+Once the package is published to PyPI:
 
-1. Add a new entry to `BROWSERS` with:
-   - `display_name` (for logs/CSV)
-   - `app_name` (macOS app name used with `open -a`)
-   - `process_name` (name used by AppleScript System Events)
-2. Verify tab switching works with Cmd+number shortcuts for the new browser.
-3. Validate with a targeted run:
-   ```bash
-   uv run browser_bench2.py --browsers your-browser-key --duration 300
-   ```
+```bash
+uvx browserbench --help
+```
 
-## Troubleshooting
+If you want to test the public GitHub repo before publishing, `uvx` can also install from a Git URL:
 
-- **Permission Issues**: `browser_bench.py` requires `sudo` authorization for `powermetrics`
-- **Plugged-in Laptop**: `browser_bench2.py` requires battery-discharge mode (unplugged MacBook)
-- **Empty Results**: Check that browsers are installed and accessible
-- **High CPU Usage**: Normal during testing due to active browsing simulation
+```bash
+uvx --from git+https://github.com/<owner>/<repo> browserbench --help
+```
 
-## Real-World Impact
+Replace `<owner>/<repo>` with the actual repository path.
 
-The benchmark results show that browser choice can significantly impact battery life:
+## Publishing Notes
 
-- **45% power difference** between most and least efficient browsers
-- **~30 hour difference** in battery life for typical usage
-- **Consistent patterns** across different website types and usage scenarios
+The package metadata is ready for a normal Python release flow. Before publishing to PyPI, run one full install/build check in a normal networked environment so `hatchling` can be resolved and the release artifacts can be validated end to end.
 
-This data helps users make informed decisions about browser choice based on their priorities (battery life vs. features).
+A typical release flow will look like:
 
-## License
+```bash
+python -m pip install build twine
+python -m build
+python -m twine check dist/*
+python -m twine upload dist/*
+```
 
-MIT License - Feel free to use and modify for your own browser testing needs.
+## Where Everything Went
 
----
+- Setup, running, and report workflows: [docs/usage.md](./docs/usage.md)
+- Files, workflows, customization, and troubleshooting: [docs/reference.md](./docs/reference.md)
+- AI-agent-specific repo notes: [AGENTS.md](./AGENTS.md)
 
-## 🤖 For AI Agents
+## What You Need
 
-If you are an AI agent working on this repository, please refer to [AGENTS.md](./AGENTS.md) for a technical guide on environment setup, core scripts, and automation mechanics.
+- macOS
+- `uv` or `pip`
+- At least one supported browser installed
+- A MacBook running on battery for the default `browserbench run` workflow
 
----
+## Output Files
 
-*Built with ❤️ for the macOS community. Contributions and improvements welcome!*
+- `browser_power_results2.csv`: results from `browserbench run`
+- `browser_power_results.csv`: results from `browserbench run-powermetrics`
+
+If you are new to the project, start with [docs/usage.md](./docs/usage.md).

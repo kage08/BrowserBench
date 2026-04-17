@@ -1,0 +1,46 @@
+[project]
+name = "browserbench"
+version = "0.1.0"
+description = "Measure and compare browser power usage on macOS."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+license = { text = "MIT" }
+keywords = ["benchmark", "browser", "macos", "power", "battery", "performance"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Testing",
+    "Topic :: System :: Benchmark",
+]
+
+[project.scripts]
+browserbench = "browserbench.cli:main"
+
+[project.urls]
+Documentation = "https://github.com/kage08/BrowserBench#readme"
+Issues = "https://github.com/kage08/BrowserBench/issues"
+Source = "https://github.com/kage08/BrowserBench"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/browserbench"]
+
+[tool.hatch.build]
+include = [
+    "src/browserbench/**/*.py",
+    "src/browserbench/resources/*.txt",
+    "README.md",
+    "LICENSE",
+]
