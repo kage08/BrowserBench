@@ -7,7 +7,7 @@ This page keeps the project details out of the main README.
 | File | Purpose | Notes |
 | --- | --- | --- |
 | `browserbench prep` | Prepares the system for a cleaner run | Installed CLI command |
-| `browserbench run` | Main benchmark | Recommended; uses `ioreg` and idle-baseline subtraction |
+| `browserbench run` | Main benchmark | Recommended; uses `ioreg`, full-session sampling, and per-browser idle baselines |
 | `browserbench run-powermetrics` | Alternate benchmark | Uses `powermetrics`; requires `sudo` |
 | `browserbench report` | Report command | Auto-detects the BrowserBench CSV schema |
 | `sites.txt` | Test site list | One URL per line |
@@ -17,7 +17,7 @@ This page keeps the project details out of the main README.
 1. `sites.txt` provides the URLs.
 2. A benchmark script opens tabs and simulates browsing.
 3. Results are written to a CSV file.
-4. A report script summarizes the CSV.
+4. A report script summarizes the latest `ioreg` run in the CSV.
 
 ## Supported Browsers
 
@@ -55,8 +55,9 @@ Tab switching uses Cmd+number shortcuts.
 
 Use this by default.
 
-- Measures total system drain
-- Subtracts an idle baseline
+- Measures total system drain across the full browser session
+- Uses matched pre-run and post-run idle baselines per browser
+- Randomizes browser order within a run
 - Supports `--duration`
 - Better fit for quick browser-to-browser comparisons
 
@@ -115,7 +116,7 @@ browserbench run --browsers your-browser-key --duration 300
 
 - For `browserbench run`, the MacBook must be unplugged.
 - Do not actively use the machine during the benchmark.
-- The scripts include an idle-baseline period before active browsing.
+- The `ioreg` workflow includes a pre-run and post-run idle-baseline period for each browser.
 - Sleep prevention is handled with `caffeinate`.
 
 ## Troubleshooting

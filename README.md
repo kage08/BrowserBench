@@ -40,7 +40,7 @@ uv pip install -e .
 
 2. Unplug the MacBook from power.
 
-   The default `ioreg` workflow measures battery discharge and requires the machine to be running on battery.
+   The default `ioreg` workflow measures battery discharge across each full browser session and requires the machine to be running on battery.
 
 3. Run the preflight check:
 
@@ -108,6 +108,7 @@ python -m twine check dist/*
 python -m twine upload dist/*
 ```
 
+
 ## Docs
 
 - Setup, running, and report workflows: [docs/usage.md](./docs/usage.md)
@@ -121,9 +122,19 @@ python -m twine upload dist/*
 - At least one supported browser installed
 - A MacBook running on battery for the default `browserbench run` workflow
 
+## Benchmark Results
+
+| Browser | Est. Battery Hours (Mean Total) | Est. Battery Hours (Median Total) |
+|---------|---------------------------------|-----------------------------------|
+| Safari | 12.02 | 13.44 |
+| Edge | 13.15 | 15.73 |
+| Chrome | 16.52 | 21.31 |
+| Zen | 18.05 | 21.51 |
+
 ## Output Files
 
 - `browser_power_results2.csv`: results from `browserbench run`
 - `browser_power_results.csv`: results from `browserbench run-powermetrics`
 
 If you are new to the project, start with [docs/usage.md](./docs/usage.md).
+

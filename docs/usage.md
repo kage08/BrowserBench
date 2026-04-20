@@ -9,7 +9,9 @@ Use `browserbench run` unless you specifically want `powermetrics`.
 Why:
 
 - It is the default workflow for this repo.
-- It measures total system drain and subtracts an idle baseline.
+- It measures full-session total system drain from browser launch through session end.
+- It uses a matched pre-run and post-run idle baseline for each browser.
+- It randomizes browser order within each run to reduce order bias.
 - It supports `--duration` for quick comparison runs.
 - It does not require running the main benchmark under `sudo`.
 

@@ -52,11 +52,22 @@ DEFAULT_IORERG_DURATION_SEC = 1200
 DEFAULT_BASELINE_DURATION_SEC = 60
 DEFAULT_POWERMETRICS_DURATION_SEC = 1200
 
-IORREG_COLUMNS = [
+IORREG_REQUIRED_COLUMNS = [
     "Browser",
     "Timestamp",
     "Total Power(mW)",
-    "Idle Baseline(mW)",
+    "Net Browser Power(mW)",
+]
+
+IORREG_COLUMNS = [
+    "Run ID",
+    "Browser Order",
+    "Browser",
+    "Timestamp",
+    "Total Power(mW)",
+    "Pre Idle Baseline(mW)",
+    "Post Idle Baseline(mW)",
+    "Matched Idle Baseline(mW)",
     "Net Browser Power(mW)",
 ]
 
@@ -65,4 +76,3 @@ POWERMETRICS_COLUMNS = ["Browser", "Timestamp", "Power(mW)"]
 
 def default_sites_path() -> Path:
     return Path(files("browserbench.resources").joinpath("sites.txt"))
-
